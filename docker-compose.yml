@@ -1,21 +1,26 @@
 services:
   livekit:
-    image: livekit/livekit-server:latest
+    image: livekit/livekit-server:v1.8
     command: --config /etc/livekit.yaml
     restart: unless-stopped
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
     ports:
       - "7880:7880/tcp"
       - "7881:7881/tcp"
       - "50000-50100:50000-50100/udp"
     volumes:
       - ./livekit/livekit.yaml:/etc/livekit.yaml:ro
-    environment:
-      LIVEKIT_KEYS: ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
 
   coturn:
-    image: coturn/coturn:latest
+    image: coturn/coturn:4.6.3
     restart: unless-stopped
-    command: -c /etc/coturn/turnserver.conf
+    command:
+      - -c
+      - /etc/coturn/turnserver.conf
+      - --realm=${TURN_REALM}
+      - --static-auth-secret=${TURN_STATIC_AUTH_SECRET}
+      - --external-ip=${PUBLIC_IPV4}
     ports:
       - "3478:3478/tcp"
       - "3478:3478/udp"

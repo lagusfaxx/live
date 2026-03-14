@@ -10,8 +10,9 @@ rtc:
 
 redis: {}
 
+# Las llaves reales se inyectan por variable de entorno LIVEKIT_KEYS
 keys:
-  dummy: dummy
+  devkey: secret
 
 logging:
   level: info
