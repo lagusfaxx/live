@@ -1,8 +1,7 @@
 services:
   livekit:
-    build:
-      context: ./livekit
-      dockerfile: Dockerfile
+    image: livekit/livekit-server:v1.8
+    command: --config /etc/livekit/livekit.yaml
     restart: unless-stopped
     environment:
       LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
@@ -10,6 +9,8 @@ services:
       - "7880:7880/tcp"
       - "7881:7881/tcp"
       - "50000-50100:50000-50100/udp"
+    volumes:
+      - ./livekit:/etc/livekit:ro
 
   coturn:
     image: coturn/coturn:4.6.3
