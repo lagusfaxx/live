@@ -5,6 +5,8 @@ Repositorio listo para desplegar en **Coolify** como app de tipo **Docker Compos
 Incluye:
 - `docker-compose.yml`
 - `livekit/livekit.yaml`
+- `livekit/Dockerfile` (empaqueta config + entrypoint de arranque robusto para LiveKit)
+- `livekit/start-livekit.sh` (fuerza lectura de config desde una ruta fuera de `/etc`)
 - `turn/turnserver.conf`
 - `token-service/` (API Node para emitir tokens LiveKit)
 - `.env.example`
@@ -124,4 +126,5 @@ Usa `url` + `token` retornados por `live-token-api` con `livekit-client`.
 ## Notas
 
 - `livekit/livekit.yaml` usa `LIVEKIT_KEYS` por variable de entorno (no hardcodea secretos).
+- La imagen de `livekit` se construye con `livekit/Dockerfile` + `livekit/start-livekit.sh` y fuerza la lectura del YAML desde `/opt/livekit-config/livekit.yaml`, evitando rutas `/etc/livekit*` que algunas plataformas montan como directorios por error.
 - `turn/turnserver.conf` define la base de coturn; `realm`, `secret` y `external-ip` se inyectan desde variables al iniciar el contenedor.
