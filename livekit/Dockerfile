@@ -1,3 +1,3 @@
 FROM livekit/livekit-server:v1.8
 
-COPY livekit.yaml /etc/livekit.yaml
+COPY livekit.yaml /etc/livekit/livekit.yaml
