@@ -1,152 +1,127 @@
-# UZEED LiveKit + TURN + Token API for Coolify
+# Live stack para app (Coolify + LiveKit + coturn + Token API)
 
-Este repo está listo para subirlo a GitHub y desplegarlo como **Docker Compose** en **Coolify**.
+Repositorio listo para desplegar en **Coolify** como app de tipo **Docker Compose**.
 
-## Qué trae
+Incluye:
+- `docker-compose.yml`
+- `livekit/livekit.yaml`
+- `turn/turnserver.conf`
+- `token-service/` (API Node para emitir tokens LiveKit)
+- `.env.example`
 
-- **LiveKit** como SFU
-- **coturn** como TURN/STUN
-- **Token API** mínima en Node/Express para generar JWT de LiveKit
+## Arquitectura
 
-## Antes de deployar
+- **LiveKit** = SFU WebRTC.
+- **coturn** = TURN/STUN para conectividad en redes restrictivas.
+- **token-service** = endpoint HTTP para generar JWT de LiveKit desde tu backend.
 
-### 1) Crea estos subdominios apuntando a tu VPS
+## 1) Prerrequisitos
 
-- `live.tudominio.cl`
-- `turn.tudominio.cl`
-- `live-api.tudominio.cl`
+1. VPS con IP pública (IPv4) y Coolify funcionando.
+2. DNS apuntando a ese VPS, por ejemplo:
+   - `live.tudominio.com`
+   - `live-api.tudominio.com`
+   - `turn.tudominio.com` (opcional, útil para configuración TURN)
+3. Puertos abiertos en firewall/proveedor:
+   - `80/tcp`, `443/tcp`
+   - `7880/tcp`, `7881/tcp`
+   - `3478/tcp`, `3478/udp`
+   - `5349/tcp`, `5349/udp`
+   - `50000-50100/udp`
+   - `49160-49200/udp`
 
-### 2) Abre estos puertos en tu VPS / proveedor / firewall
+## 2) Configurar variables
 
-- `80/tcp`
-- `443/tcp`
-- `7881/tcp`
-- `3478/tcp`
-- `3478/udp`
-- `5349/tcp`
-- `5349/udp`
-- `50000-50100/udp`
-- `49160-49200/udp`
+1. Copia `.env.example` a `.env`.
+2. Completa TODOS los placeholders:
+   - `LIVEKIT_URL` debe ser `wss://live.tudominio.com`
+   - `PUBLIC_IPV4` debe ser la IP pública real
+   - Genera secretos largos para `LIVEKIT_API_SECRET`, `SHARED_BEARER_TOKEN`, `TURN_STATIC_AUTH_SECRET`
 
-### 3) Duplica `.env.example` como `.env`
+## 3) Deploy en Coolify
 
-Reemplaza todos los placeholders.
+1. Sube este repo a GitHub/GitLab.
+2. En Coolify: **New Resource** → **Docker Compose**.
+3. Conecta el repo y selecciona la rama.
+4. En Environment Variables pega el contenido equivalente a tu `.env`.
+5. Deploy.
 
-## Archivos que debes editar sí o sí
+### Domains en Coolify
 
-### `livekit/livekit.yaml`
+- Servicio `livekit`:
+  - Dominio: `live.tudominio.com`
+  - Puerto interno: `7880`
+  - HTTPS habilitado (esto te da `wss://`)
 
-Este archivo ya viene listo, pero la llave real se inyecta por `LIVEKIT_KEYS` desde variables de entorno.
+- Servicio `live-token-api`:
+  - Dominio: `live-api.tudominio.com`
+  - Puerto interno: `3000`
 
-### `turn/turnserver.conf`
+- Servicio `coturn`:
+  - No necesita dominio HTTP para funcionar.
+  - Requiere puertos publicados (ya están en `docker-compose.yml`).
 
-Debes cambiar:
+## 4) Endpoint para generar token
 
-- `static-auth-secret`
-- `realm`
-- `external-ip`
+`POST /live/token`
 
-## Deploy en Coolify
+Headers:
+- `Authorization: Bearer <SHARED_BEARER_TOKEN>`
+- `Content-Type: application/json`
 
-### App
+Body ejemplo:
 
-Crea una nueva app con build pack **Docker Compose** y usa este repo.
+```json
+{
+  "identity": "user_123",
+  "room": "live_room_1",
+  "name": "Agustin",
+  "metadata": { "role": "host" },
+  "canPublish": true,
+  "canSubscribe": true,
+  "canPublishData": true,
+  "ttl": "1h"
+}
+```
 
-### Domains sugeridos
-
-- Servicio `livekit` -> `https://live.tudominio.cl` con puerto interno `7880`
-- Servicio `live-token-api` -> `https://live-api.tudominio.cl` con puerto interno `3000`
-- `coturn` no necesita dominio HTTP para el proxy; necesita puertos publicados
-
-### Variables de entorno en Coolify
-
-Copia las de `.env.example` y reemplázalas.
-
-## Uso rápido desde tu backend actual
-
-Tu API de UZEED puede pedir token así:
+Curl:
 
 ```bash
-curl -X POST https://live-api.tudominio.cl/live/token \
+curl -X POST https://live-api.tudominio.com/live/token \
   -H "Authorization: Bearer TU_SHARED_BEARER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "identity": "user_123",
-    "room": "live_abc",
-    "name": "Agustin",
-    "metadata": {"role":"host"},
-    "canPublish": true,
-    "canSubscribe": true,
-    "canPublishData": true
+    "identity":"user_123",
+    "room":"live_room_1",
+    "name":"Agustin",
+    "metadata":{"role":"host"}
   }'
 ```
 
-Respuesta esperada:
+Respuesta:
 
 ```json
 {
   "token": "<jwt>",
-  "url": "wss://live.tudominio.cl",
-  "room": "live_abc",
+  "url": "wss://live.tudominio.com",
+  "room": "live_room_1",
   "identity": "user_123"
 }
 ```
 
-## Cómo conectar el frontend
+## 5) Conexión desde tu app
 
-Con `livekit-client`:
+Usa `url` + `token` retornados por `live-token-api` con `livekit-client`.
 
-```ts
-import { Room } from 'livekit-client';
+## 6) Checklist anti errores de deploy
 
-const room = new Room();
-await room.connect(url, token);
-```
+- [ ] `LIVEKIT_URL` usa `wss://` y dominio válido.
+- [ ] `PUBLIC_IPV4` coincide con la IP pública real del host.
+- [ ] Puertos UDP abiertos (sin esto WebRTC falla aunque HTTPS funcione).
+- [ ] `SHARED_BEARER_TOKEN` coincide entre tu backend y token-service.
+- [ ] Dominio `live-api` apunta al servicio correcto (puerto interno 3000).
 
-## ICE servers en el frontend
+## Notas
 
-Si luego quieres forzar TURN o personalizar ICE servers, agrega los servers con tu dominio TURN.
-
-Ejemplo conceptual:
-
-```ts
-const room = new Room({
-  adaptiveStream: true,
-  dynacast: true,
-});
-```
-
-## Recomendación inicial de calidad
-
-### Host
-- 720p
-- 30 fps
-- simulcast encendido
-
-### Viewers
-- calidad adaptativa
-- reducir a 360p cuando la red baje
-
-## Notas importantes
-
-- El proxy de Coolify te sirve para **HTTPS/WSS**, pero **WebRTC además necesita UDP y puertos publicados**.
-- No mezcles este stack dentro de la API principal de UZEED.
-- Este repo está pensado para que lo deployes **como servicio separado**.
-
-## Checklist final
-
-- [ ] DNS apuntando al VPS
-- [ ] Firewall abierto
-- [ ] `.env` completado
-- [ ] `turnserver.conf` con IP pública real
-- [ ] Dominios configurados en Coolify
-- [ ] Token API respondiendo en `/health`
-- [ ] LiveKit accesible por `wss://live.tudominio.cl`
-
-## Siguiente paso recomendado
-
-Después de desplegar esto, integra en UZEED:
-
-- endpoint interno que pida token al `live-token-api`
-- permisos host/viewer/cohost
-- chat y gifts por tu API principal o DB separada
+- `livekit/livekit.yaml` usa `LIVEKIT_KEYS` por variable de entorno (no hardcodea secretos).
+- `turn/turnserver.conf` define la base de coturn; `realm`, `secret` y `external-ip` se inyectan desde variables al iniciar el contenedor.

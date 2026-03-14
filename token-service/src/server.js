@@ -20,8 +20,12 @@ if (!LIVEKIT_URL || !LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !SHARED_BEARER_TO
   process.exit(1);
 }
 
-app.use(cors({ origin: ALLOWED_ORIGIN?.split(',').map((v) => v.trim()) || true }));
-app.use(express.json());
+const allowedOrigins = ALLOWED_ORIGIN
+  ? ALLOWED_ORIGIN.split(',').map((value) => value.trim())
+  : true;
+
+app.use(cors({ origin: allowedOrigins }));
+app.use(express.json({ limit: '1mb' }));
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'uzeed-live-token-api' });
@@ -48,14 +52,21 @@ app.post('/live/token', async (req, res) => {
     return res.status(400).json({ error: 'identity and room are required' });
   }
 
-  const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+  const encodedMetadata =
+    metadata === undefined
+      ? undefined
+      : typeof metadata === 'string'
+        ? metadata
+        : JSON.stringify(metadata);
+
+  const token = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
     identity: String(identity),
     name: name ? String(name) : String(identity),
-    ttl,
-    metadata: metadata ? JSON.stringify(metadata) : undefined,
+    ttl: String(ttl),
+    metadata: encodedMetadata,
   });
 
-  at.addGrant({
+  token.addGrant({
     roomJoin: true,
     room: String(room),
     canPublish: Boolean(canPublish),
@@ -64,7 +75,7 @@ app.post('/live/token', async (req, res) => {
   });
 
   return res.json({
-    token: await at.toJwt(),
+    token: await token.toJwt(),
     url: LIVEKIT_URL,
     room: String(room),
     identity: String(identity),
