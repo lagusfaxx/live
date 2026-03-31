@@ -3,7 +3,7 @@ services:
     build:
       context: ./livekit
       dockerfile: Dockerfile
-    command: --config /etc/livekit/livekit.yaml
+    command: --config /etc/livekit/livekit.yaml --node-ip=${PUBLIC_IPV4}
     restart: unless-stopped
     environment:
       LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"

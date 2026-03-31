@@ -7,6 +7,15 @@ rtc:
   port_range_start: 50000
   port_range_end: 50100
   use_external_ip: true
+  # Enable ICE-lite for better NAT traversal as SFU
+  use_ice_lite: true
+
+turn:
+  enabled: true
+  domain: live.uzeed.cl
+  tls_port: 5349
+  udp_port: 3478
+  external_tls: true
 
 redis: {}
 
