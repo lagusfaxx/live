@@ -12,10 +12,9 @@ rtc:
 
 turn:
   enabled: true
-  domain: turn.uzeed.cl
+  domain: live.uzeed.cl
   tls_port: 5349
   udp_port: 3478
-  # Use external coturn TURN server credentials
   external_tls: true
 
 redis: {}
