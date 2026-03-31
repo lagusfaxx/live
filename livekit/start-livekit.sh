@@ -1,11 +1,31 @@
 #!/bin/sh
 set -eu
 
-CONFIG_FILE="/opt/livekit-config/livekit.yaml"
+# Genera la configuración en runtime para inyectar variables de entorno
+cat > /etc/livekit/livekit.yaml <<EOF
+port: 7880
+bind_addresses:
+  - "0.0.0.0"
 
-if [ ! -f "$CONFIG_FILE" ]; then
-  echo "fatal: LiveKit config not found at $CONFIG_FILE" >&2
-  exit 1
-fi
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 50100
+  use_external_ip: true
 
-exec livekit-server --config "$CONFIG_FILE"
+turn:
+  enabled: true
+  domain: ${TURN_DOMAIN:-}
+  udp_port: 3478
+  tls_port: 5349
+
+redis: {}
+
+keys:
+  devkey: secret
+
+logging:
+  level: info
+EOF
+
+exec livekit-server --config /etc/livekit/livekit.yaml
