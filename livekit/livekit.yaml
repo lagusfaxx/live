@@ -20,8 +20,8 @@ turn:
 redis: {}
 
 # Las llaves reales se inyectan por variable de entorno LIVEKIT_KEYS
-keys:
-  devkey: secret
+# El secret debe tener al menos 32 caracteres
+keys: {}
 
 logging:
   level: info
